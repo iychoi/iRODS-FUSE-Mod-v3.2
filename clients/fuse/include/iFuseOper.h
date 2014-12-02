@@ -10,6 +10,36 @@
 #include "rodsPath.h"
 #include "iFuseLib.h"
 
+#ifdef ENABLE_LAZY_UPLOAD
+
+#define ALLOC_IFUSE_DESC_INDEX(f) \
+    f->fh = (uint64_t)malloc(sizeof(uint64_t));
+
+#define FREE_IFUSE_DESC_INDEX(f) \
+    free((uint64_t*)(f->fh));
+
+#define GET_IFUSE_DESC_INDEX(f) \
+    (*((uint64_t*)(f->fh)))
+
+#define SET_IFUSE_DESC_INDEX(f, i) \
+    (*((uint64_t*)(f->fh))) = i;
+
+#else
+
+#define ALLOC_IFUSE_DESC_INDEX(f) \
+    f->fh = 0;
+
+#define FREE_IFUSE_DESC_INDEX(f) \
+    f->fh = 0;
+
+#define GET_IFUSE_DESC_INDEX(f) \
+    f->fh
+
+#define SET_IFUSE_DESC_INDEX(f, i) \
+    f->fh = i;
+
+#endif
+
 #ifdef  __cplusplus
 extern "C" {
 #endif

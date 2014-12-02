@@ -34,6 +34,8 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
+#else
+#include <pthread.h>
 #endif
 // =-=-=-=-=-=-=-
 
@@ -112,6 +114,43 @@ typedef struct newlyCreatedFile {
     struct stat stbuf;
     uint cachedTime;
 } newlyCreatedFile_t;
+
+#ifdef USE_BOOST
+#define LOCK(Lock) \
+        ((Lock).lock())
+#define UNLOCK(Lock) \
+        ((Lock).unlock())
+#define INIT_STRUCT_LOCK(s) \
+        INIT_LOCK((s).mutex)
+#define INIT_LOCK(Lock) \
+        ((Lock) = new boost::mutex)
+#define FREE_LOCK(Lock) \
+	    delete (Lock); \
+	    (Lock) = 0;
+#define LOCK_STRUCT(s) \
+        LOCK(*((s).mutex))
+#define UNLOCK_STRUCT(s) \
+        UNLOCK(*((s).mutex))
+#define FREE_STRUCT_LOCK(s) \
+	    FREE_LOCK((s).mutex);
+#else
+#define LOCK(Lock) \
+        (pthread_mutex_lock (&(Lock)))
+#define UNLOCK(Lock) \
+        (pthread_mutex_unlock (&(Lock)))
+#define INIT_STRUCT_LOCK(s) \
+        INIT_LOCK((s).lock)
+#define INIT_LOCK(s) \
+        (pthread_mutex_init (&(s), NULL))
+#define FREE_LOCK(s) \
+        pthread_mutex_destroy (&(s))
+#define LOCK_STRUCT(s) \
+        LOCK((s).lock)
+#define UNLOCK_STRUCT(s) \
+        UNLOCK((s).lock)
+#define FREE_STRUCT_LOCK(s) \
+        FREE_LOCK((s).lock)
+#endif
 
 #ifdef  __cplusplus
 extern "C" {

@@ -10,7 +10,7 @@
 #include "miscUtil.h"
 #include "rcPortalOpr.h"
 
-int
+static int
 setSessionTicket(rcComm_t *myConn, char *ticket) {
    ticketAdminInp_t ticketAdminInp;
    int status;

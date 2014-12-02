@@ -32,9 +32,6 @@ srcDir =	$(fuseDir)/src
 incDir =	$(fuseDir)/include
 
 
-
-
-
 #
 # Source files
 #
@@ -46,7 +43,15 @@ BINS =		\
 
 LIB_OBJS =	\
 		$(objDir)/iFuseOper.o \
-		$(objDir)/iFuseLib.o
+		$(objDir)/iFuseLib.o \
+		$(objDir)/iFuseLib.FSUtils.o \
+		$(objDir)/iFuseLib.Preload.o \
+		$(objDir)/iFuseLib.LazyUpload.o \
+        $(objDir)/iFuseLib.Http.o \
+        $(objDir)/iFuseLib.Trace.o \
+        $(objDir)/iFuseLib.Logging.o \
+        $(objDir)/iFuseLib.List.o \
+        $(objDir)/iFuseLib.Hashtable.o
 
 INCLUDES +=	-I$(incDir)
 
@@ -58,18 +63,38 @@ INCLUDES +=	-I$(incDir)
 # Compile and link flags
 #
 
+# enable/disable extended features
+PRELOAD = 1
+LAZY_UPLOAD = 1
+#TRACE = 1
+
 CFLAGS_OPTIONS := -g $(CFLAGS) $(MY_CFLAG)
 ifdef IRODS_FS
 CFLAGS_OPTIONS += -D_REENTRANT
+ifeq ($(OS_platform), osx_platform)
+INCLUDES += -I$(fuseHomeDir)
+endif
+ifeq ($(OS_platform), linux_platform)
 INCLUDES +=	-I$(fuseHomeDir)/include
+endif
+endif
+
+ifdef PRELOAD
+CFLAGS_OPTIONS += -DENABLE_PRELOAD
+endif
+ifdef LAZY_UPLOAD
+CFLAGS_OPTIONS += -DENABLE_LAZY_UPLOAD
+endif
+ifdef TRACE
+CFLAGS_OPTIONS += -DENABLE_TRACE
 endif
 
 CFLAGS =	$(CFLAGS_OPTIONS) $(INCLUDES) $(LIB_INCLUDES) $(SVR_INCLUDES) $(MODULE_CFLAGS)
 
 ifeq ($(OS_platform), linux_platform)
-LDFLAGS +=	$(LDADD) $(MODULE_LDFLAGS) -L$(fuseHomeDir)/lib -lfuse -ldl -lrt
+LDFLAGS +=	$(LDADD) $(MODULE_LDFLAGS) -L$(fuseHomeDir)/lib -lfuse -ldl -lrt -lcrypto
 else
-LDFLAGS +=	$(LDADD) $(MODULE_LDFLAGS) -L$(fuseHomeDir)/lib -lfuse -ldl
+LDFLAGS +=	$(LDADD) $(MODULE_LDFLAGS) -L$(fuseHomeDir)/lib -lfuse -ldl -lcrypto
 endif
 
 # for checking memleak
@@ -80,10 +105,20 @@ LDFLAGS +=	$(LIBRARY)
 
 ifdef GSI_AUTH
 
-ifeq ($(GSI_INSTALL_TYPE),)
-  $GSI_INSTALL_TYPE2=
+ifeq ($(OS_platform), osx_platform)
+GSI_LIB_DIR=lib
 else
-  $GSI_INSTALL_TYPE2=$(GSI_INSTALL_TYPE)
+ifeq ($(ADDR_64BITS), 1)
+GSI_LIB_DIR=lib64
+else
+GSI_LIB_DIR=lib
+endif
+endif
+
+ifeq ($(GSI_INSTALL_TYPE),)
+GSI_INSTALL_TYPE2=
+else
+GSI_INSTALL_TYPE2=_$(GSI_INSTALL_TYPE)
 endif
 
 
@@ -101,7 +136,7 @@ GSI_CRYPTO = crypto$(GSI_INSTALL_TYPE2)
 endif
 
 LIB_GSI_AUTH = \
-      -L$(GLOBUS_LOCATION)/lib \
+      -L$(GLOBUS_LOCATION)/$(GSI_LIB_DIR) \
       -lglobus_gss_assist$(GSI_INSTALL_TYPE2) \
       -lglobus_gssapi_gsi$(GSI_INSTALL_TYPE2) \
       -lglobus_gsi_credential$(GSI_INSTALL_TYPE2) \
@@ -156,7 +191,7 @@ $(objDir)/%.o:	$(srcDir)/%.c $(LIBRARY)
 
 $(binDir)/%:	$(objDir)/%.o $(LIB_OBJS)
 	@echo "Link fuse `basename $@`..."
-	@$(LDR) -o $@ $< $(LIB_OBJS) $(LDFLAGS)
+	@$(LDR) -o $@ $< $(LIB_OBJS) $(LDFLAGS) -lcrypto
 
 
 
