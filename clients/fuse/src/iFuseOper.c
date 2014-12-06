@@ -1175,7 +1175,6 @@ irodsRelease (const char *path, struct fuse_file_info *fi)
 
     //descInx = fi->fh;
     descInx = GET_IFUSE_DESC_INDEX(fi);
-    FREE_IFUSE_DESC_INDEX(fi);
 
     if (checkFuseDesc (descInx) < 0) {
         return -EBADF;
@@ -1184,6 +1183,7 @@ irodsRelease (const char *path, struct fuse_file_info *fi)
     status = ifuseClose ((char *) path, descInx);
 
     freeIFuseDesc (descInx);
+    FREE_IFUSE_DESC_INDEX(fi);
 
     if (status < 0) {
         if ((myError = getErrno (status)) > 0) {
