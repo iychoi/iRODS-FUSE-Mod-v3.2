@@ -37,6 +37,8 @@ static fl_concurrentList_t *LazyUploadBufferedFileList_Opened;
 static fl_Hashtable *LazyUploadBufferedFileTable_Created;
 static fl_Hashtable *LazyUploadBufferedFileTable_Opened;
 
+extern pathCacheQue_t PathArray[];
+
 /**************************************************************************
  * function definitions
  **************************************************************************/
@@ -49,6 +51,7 @@ static int _getBufferPath(const char *iRODSPath, char *bufferPath);
 static int _removeAllBufferedFiles();
 static int _getiRODSPath(const char *path, char *iRODSPath);
 static int _isLazyUploadFile(const char *iRODSPath);
+static void _clearCache(const char *path);
 static int _commitLocalBuffer(const char *path, struct fuse_file_info *fi, lazyUploadFileInfo_t *lazyUploadFileInfo);
 static int _upload(const char *iRODSPath);
 
@@ -534,6 +537,11 @@ static void _unlockLazyUpload() {
 #endif
 }
 
+static void
+_clearCache(const char *path) {
+    rmPathFromCache ((char*)path, PathArray);
+}
+
 static int
 _commitLocalBuffer(const char *path, struct fuse_file_info *fi, lazyUploadFileInfo_t *lazyUploadFileInfo) {
     int status;
@@ -581,7 +589,6 @@ _commitLocalBuffer(const char *path, struct fuse_file_info *fi, lazyUploadFileIn
 
         //descInx = fi->fh;
         descInx = GET_IFUSE_DESC_INDEX(fi);
-        FREE_IFUSE_DESC_INDEX(fi);
         if (checkFuseDesc (descInx) < 0) {
             return -EBADF;
         }
@@ -609,6 +616,8 @@ _commitLocalBuffer(const char *path, struct fuse_file_info *fi, lazyUploadFileIn
             rodsLog (LOG_DEBUG, "_commitLocalBuffer: upload error - %s, %d", iRODSPath, status);
             return status;
         }
+
+        _clearCache(path);
 
         // reopen file
         rodsLog (LOG_DEBUG, "_commitLocalBuffer: reopening iRODS file handle - %s", iRODSPath);
@@ -656,7 +665,6 @@ _commitLocalBuffer(const char *path, struct fuse_file_info *fi, lazyUploadFileIn
         fillIFuseDesc (descInx, iFuseConn, fd, dataObjInp.objPath, 
           (char *) iRODSPath);
         relIFuseConn (iFuseConn);
-        ALLOC_IFUSE_DESC_INDEX(fi);
         SET_IFUSE_DESC_INDEX(fi, descInx);
         rodsLog (LOG_DEBUG, "_commitLocalBuffer: created new file handle - %s - %d", iRODSPath, descInx);
     } else {
