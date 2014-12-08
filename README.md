@@ -1,14 +1,14 @@
 iRODS-FUSE-Mod
 ==============
 
-iRODS-FUSE-Mod is a modified version of iRODS-FUSE (irodsFs, release 3.3.1) to provide better performance in file read/write and usage tracking.
+iRODS-FUSE-Mod is a modified version of iRODS-FUSE (irodsFs, release 3.2) to provide better performance in file read/write and usage tracking.
 
 Overview
 --------
 
-Read/write performance of iRODS FUSE (irodsFs) is much slower than "iget" and "iput", command-line version tools, when we try to deal with large data files. This is because "iget" and "iput" uses multi-threaded accesses to remote data files and uses bigger chunk size per request while iRODS FUSE (irodsFs) uses a single thread and small chunk size.
+Read/write performance of iRODS FUSE (irodsFs) is much slower than "iget" and "iput", which are command-line tools, when we work with large data files. This is because "iget" and "iput" use multi-threads to access remote data files and use bigger chunk size per requests while iRODS FUSE (irodsFs) uses a single thread and small chunk size.
 
-In this modification, file read/write performances are improved by using the same techniques as "iget" and "iput" are using. While reading a remote file, the modified iRODS FUSE will download the whole file to local disk in a background. Once it finishes background downloading the file, subsequent file read will be switched from a remote iRODS to a local disk and performance will get faster. When write a file, the modified iRODS FUSE will temporarily store the file content to the local disk and upload when the file is flushed. During preload and lazy-upload, the modification uses same APIs that "iget" and "iput" uses. As they are multi-threaded and use bigger chunk size, preload and lazy-upload work very fast.
+In this modification, file read/write performances are improved by using the same techniques as "iget" and "iput" are using. While reading a remote file, the modified iRODS FUSE will download the whole file to local disk in a background. Once it finishes background downloading the file, subsequent file read is switched from a remote iRODS to a local disk and performance gets faster. When write a file, the modified iRODS FUSE will temporarily store the file content to the local disk and upload when the file is flushed. During preload and lazy-upload, the modification uses same APIs that "iget" and "iput" uses.
 
 This modification also provides usage tracking feature. This feature is developed by Jude Nelson. This feature can be used for monitoring users or debugging purposes. Collected data will be posted to a configured remote server.  
 
@@ -57,6 +57,59 @@ File Size | iRODS-FUSE (Unmodified) | iRODS-FUSE-Mod
 1GB | 365.1 seconds | 27.5 seconds
 2GB | 747.7 seconds | 53.7 seconds
 
+
+Postmark Benchmark
+------------------
+
+iRODS-FUSE (Unmodified)
+
+```
+Creating files...Done
+Performing transactions..........Done
+Deleting files...Done
+Time:   
+        91371 seconds total
+        66662 seconds of transactions (0 per second)
+
+Files:  
+        9910 created (0 per second)
+                Creation alone: 5000 files (0 per second)
+                Mixed with transactions: 4910 files (0 per second)
+        5065 read (0 per second)
+        4935 appended (0 per second)
+        9910 deleted (0 per second)
+                Deletion alone: 4820 files (5 per second)
+                Mixed with transactions: 5090 files (0 per second)
+
+Data:   
+        28158.37 megabytes read (315.57 kilobytes per second)
+        57088.03 megabytes written (639.79 kilobytes per second)
+```
+
+iRODS-FUSE-Mod
+
+```
+Creating files...Done
+Performing transactions..........Done
+Deleting files...Done
+Time:   
+        58132 seconds total
+        46388 seconds of transactions (0 per second)
+
+Files:  
+        9910 created (0 per second)
+                Creation alone: 5000 files (0 per second)
+                Mixed with transactions: 4910 files (0 per second)
+        5065 read (0 per second)
+        4935 appended (0 per second)
+        9910 deleted (0 per second)
+                Deletion alone: 4820 files (4 per second)
+                Mixed with transactions: 5090 files (0 per second)
+
+Data:   
+        28158.37 megabytes read (496.01 kilobytes per second)
+        57088.03 megabytes written (1005.61 kilobytes per second)
+```
 
 Debug Mode
 ----------
